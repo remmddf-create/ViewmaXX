@@ -1,0 +1,70 @@
+{
+  "name": "viewmaxx-platform",
+  "version": "1.0.0",
+  "description": "A modern video sharing platform with advanced features and monetization",
+  "main": "server/src/index.ts",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "build": "npm run build:server && npm run build:client",
+    "build:server": "cd server && npm run build",
+    "build:client": "cd client && npm run build",
+    "start": "npm run start:server",
+    "start:server": "cd server && npm start",
+    "test": "npm run test:server && npm run test:client",
+    "test:server": "cd server && npm test",
+    "test:client": "cd client && npm test",
+    "lint": "npm run lint:server && npm run lint:client",
+    "lint:server": "cd server && npm run lint",
+    "lint:client": "cd client && npm run lint",
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install",
+    "clean": "rm -rf node_modules server/node_modules client/node_modules",
+    "docker:dev": "docker-compose up -d",
+    "docker:prod": "docker-compose -f docker-compose.prod.yml up -d",
+    "docker:down": "docker-compose down",
+    "db:migrate": "cd server && npx prisma migrate dev",
+    "db:deploy": "cd server && npx prisma migrate deploy",
+    "db:seed": "cd server && npx prisma db seed",
+    "db:studio": "cd server && npx prisma studio",
+    "db:generate": "cd server && npx prisma generate"
+  },
+  "keywords": [
+    "video",
+    "sharing",
+    "platform",
+    "streaming",
+    "content",
+    "creators",
+    "monetization",
+    "nextjs",
+    "nodejs",
+    "prisma",
+    "postgresql",
+    "redis",
+    "s3",
+    "ffmpeg"
+  ],
+  "author": "MiniMax Agent",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/viewmaxx.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-org/viewmaxx/issues"
+  },
+  "homepage": "https://github.com/your-org/viewmaxx#readme",
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "devDependencies": {
+    "concurrently": "^8.2.0",
+    "cross-env": "^7.0.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  }
+}

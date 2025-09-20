@@ -1,0 +1,486 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  username      String   @unique
+  firstName     String?
+  lastName      String?
+  avatar        String?
+  coverImage    String?
+  isVerified    Boolean  @default(false)
+  isActive      Boolean  @default(true)
+  role          UserRole @default(USER)
+  passwordHash  String?
+  googleId      String?  @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  channel       Channel?
+  videos        Video[]
+  comments      Comment[]
+  likes         Like[]
+  subscriptions Subscription[] @relation("UserSubscriptions")
+  subscribers   Subscription[] @relation("ChannelSubscribers")
+  playlists     Playlist[]
+  notifications Notification[]
+  liveStreams   LiveStream[]
+  monetization  Monetization?
+  payments      Payment[]
+  reports       Report[]
+  watchHistory  WatchHistory[]
+  analytics     UserAnalytics[]
+
+  @@map("users")
+}
+
+model Channel {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+  avatar      String?
+  banner      String?
+  isVerified  Boolean @default(false)
+  isActive    Boolean @default(true)
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  videos        Video[]
+  subscriptions Subscription[] @relation("ChannelSubscribers")
+  liveStreams   LiveStream[]
+  playlists     Playlist[]
+  analytics     ChannelAnalytics[]
+
+  @@map("channels")
+}
+
+model Video {
+  id          String      @id @default(uuid())
+  title       String
+  description String?
+  thumbnail   String?
+  duration    Int? // in seconds
+  views       Int         @default(0)
+  likes       Int         @default(0)
+  dislikes    Int         @default(0)
+  status      VideoStatus @default(PROCESSING)
+  privacy     Privacy     @default(PUBLIC)
+  category    String?
+  tags        String[]
+  language    String      @default("en")
+
+  // Video files
+  originalFile String?
+  processedFiles Json? // {"144p": "url", "360p": "url", ...}
+  hlsPlaylist    String?
+  dashPlaylist   String?
+
+  // SEO
+  slug        String  @unique
+  metaTitle   String?
+  metaDesc    String?
+
+  // Monetization
+  monetized   Boolean @default(false)
+  adsEnabled  Boolean @default(true)
+  revenue     Float   @default(0)
+
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channelId String
+  channel   Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  comments      Comment[]
+  likes         Like[]
+  playlistItems PlaylistItem[]
+  reports       Report[]
+  watchHistory  WatchHistory[]
+  analytics     VideoAnalytics[]
+
+  @@map("videos")
+}
+
+model Comment {
+  id      String @id @default(uuid())
+  content String
+  likes   Int    @default(0)
+
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  videoId String
+  video   Video  @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  // For replies
+  parentId String?
+  parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies  Comment[] @relation("CommentReplies")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("comments")
+}
+
+model Like {
+  id     String   @id @default(uuid())
+  type   LikeType
+  userId String
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  videoId String?
+  video   Video?  @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, videoId, type])
+  @@map("likes")
+}
+
+model Subscription {
+  id String @id @default(uuid())
+
+  userId    String
+  user      User    @relation("UserSubscriptions", fields: [userId], references: [id], onDelete: Cascade)
+  channelId String
+  channel   Channel @relation("ChannelSubscribers", fields: [channelId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, channelId])
+  @@map("subscriptions")
+}
+
+model Playlist {
+  id          String          @id @default(uuid())
+  name        String
+  description String?
+  thumbnail   String?
+  privacy     Privacy         @default(PUBLIC)
+  status      PlaylistStatus  @default(ACTIVE)
+
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channelId String
+  channel   Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  items PlaylistItem[]
+
+  @@map("playlists")
+}
+
+model PlaylistItem {
+  id       String @id @default(uuid())
+  position Int
+
+  playlistId String
+  playlist   Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  videoId    String
+  video      Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([playlistId, videoId])
+  @@map("playlist_items")
+}
+
+model LiveStream {
+  id          String           @id @default(uuid())
+  title       String
+  description String?
+  thumbnail   String?
+  status      LiveStreamStatus @default(OFFLINE)
+  streamKey   String           @unique
+  viewers     Int              @default(0)
+  maxViewers  Int              @default(0)
+  chatEnabled Boolean          @default(true)
+  privacy     Privacy          @default(PUBLIC)
+
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channelId String
+  channel   Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  startedAt DateTime?
+  endedAt   DateTime?
+
+  // Relations
+  chatMessages ChatMessage[]
+
+  @@map("live_streams")
+}
+
+model ChatMessage {
+  id      String @id @default(uuid())
+  message String
+
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  liveStreamId String
+  liveStream   LiveStream @relation(fields: [liveStreamId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@map("chat_messages")
+}
+
+model Monetization {
+  id                String             @id @default(uuid())
+  status            MonetizationStatus @default(PENDING)
+  applicationDate   DateTime           @default(now())
+  approvalDate      DateTime?
+  rejectionReason   String?
+  totalEarnings     Float              @default(0)
+  availableBalance  Float              @default(0)
+  lifetimeEarnings  Float              @default(0)
+  revenueShare      Float              @default(70) // percentage
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("monetizations")
+}
+
+model Payment {
+  id            String        @id @default(uuid())
+  amount        Float
+  currency      String        @default("USD")
+  status        PaymentStatus @default(PENDING)
+  method        PaymentMethod
+  stripeId      String?
+  paypalId      String?
+  cryptoAddress String?
+  cryptoTxHash  String?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("payments")
+}
+
+model Notification {
+  id       String           @id @default(uuid())
+  title    String
+  message  String
+  type     NotificationType
+  isRead   Boolean          @default(false)
+  data     Json?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@map("notifications")
+}
+
+model Report {
+  id       String     @id @default(uuid())
+  reason   String
+  details  String?
+  status   ReportStatus @default(PENDING)
+  type     ReportType
+
+  reporterId String
+  reporter   User   @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+
+  videoId String?
+  video   Video?  @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("reports")
+}
+
+model WatchHistory {
+  id           String    @id @default(uuid())
+  watchTime    Int       @default(0) // seconds watched
+  completed    Boolean   @default(false)
+  lastPosition Int       @default(0) // last position in seconds
+
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  videoId String
+  video   Video  @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, videoId])
+  @@map("watch_history")
+}
+
+// Analytics Models
+model UserAnalytics {
+  id           String   @id @default(uuid())
+  date         DateTime @db.Date
+  totalViews   Int      @default(0)
+  watchTime    Int      @default(0) // in minutes
+  newSubscribers Int    @default(0)
+  revenue      Float    @default(0)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@map("user_analytics")
+}
+
+model ChannelAnalytics {
+  id             String   @id @default(uuid())
+  date           DateTime @db.Date
+  views          Int      @default(0)
+  subscribers    Int      @default(0)
+  videosUploaded Int      @default(0)
+  watchTime      Int      @default(0) // in minutes
+  revenue        Float    @default(0)
+
+  channelId String
+  channel   Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@unique([channelId, date])
+  @@map("channel_analytics")
+}
+
+model VideoAnalytics {
+  id                String   @id @default(uuid())
+  date              DateTime @db.Date
+  views             Int      @default(0)
+  likes             Int      @default(0)
+  comments          Int      @default(0)
+  shares            Int      @default(0)
+  watchTime         Int      @default(0) // in minutes
+  averageViewDuration Float  @default(0) // in seconds
+  revenue           Float    @default(0)
+  impressions       Int      @default(0)
+  clickThroughRate  Float    @default(0)
+
+  videoId String
+  video   Video  @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([videoId, date])
+  @@map("video_analytics")
+}
+
+// Enums
+enum UserRole {
+  USER
+  CREATOR
+  MODERATOR
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum VideoStatus {
+  UPLOADING
+  PROCESSING
+  PUBLISHED
+  UNLISTED
+  PRIVATE
+  DELETED
+  FAILED
+}
+
+enum Privacy {
+  PUBLIC
+  UNLISTED
+  PRIVATE
+}
+
+enum PlaylistStatus {
+  ACTIVE
+  DELETED
+}
+
+enum LikeType {
+  LIKE
+  DISLIKE
+}
+
+enum LiveStreamStatus {
+  OFFLINE
+  STARTING
+  LIVE
+  ENDING
+  ENDED
+}
+
+enum MonetizationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  STRIPE
+  PAYPAL
+  CRYPTO
+  BANK_TRANSFER
+}
+
+enum NotificationType {
+  VIDEO_UPLOAD
+  COMMENT
+  LIKE
+  SUBSCRIPTION
+  MONETIZATION
+  PAYMENT
+  SYSTEM
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  RESOLVED
+  DISMISSED
+}
+
+enum ReportType {
+  VIDEO
+  COMMENT
+  USER
+  COPYRIGHT
+  SPAM
+  HARASSMENT
+}

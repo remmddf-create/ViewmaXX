@@ -1,5 +1,7 @@
 import express from 'express';
 import adminRoutes from './routes/admin';
+import authRoutes from './routes/auth';
+app.use('/auth', authRoutes);
 
 const app = express();
 const PORT = process.env.PORT || 3001;

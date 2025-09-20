@@ -10,10 +10,12 @@
   },
   "dependencies": {
     "aws-sdk": "^2.1692.0",
-    "express": "latest"
+    "express": "^5.1.0"
   },
   "devDependencies": {
     "@types/aws-sdk": "^2.7.4",
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.5.2",
     "ts-node": "latest",
     "typescript": "latest"
   }

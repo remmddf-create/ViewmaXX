@@ -1,10 +1,15 @@
-import React from 'react';
+import AdminSidebar from '../components/AdminSidebar';
+import AdminHeader from '../components/AdminHeader';
+import AdminDashboard from '../components/AdminDashboard';
 
 export default function Home() {
   return (
-    <main style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-      <h1>ViewmaXX Admin Dashboard</h1>
-      <p>Welcome to the admin panel. Start building moderation and analytics features here.</p>
-    </main>
+    <div style={{ display: 'flex', minHeight: '100vh' }}>
+      <AdminSidebar />
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <AdminHeader />
+        <AdminDashboard />
+      </div>
+    </div>
   );
 }
